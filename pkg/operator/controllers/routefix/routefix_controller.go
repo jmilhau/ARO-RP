@@ -8,15 +8,13 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,12 +36,9 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-	securitycli   securityclient.Interface
-
 	client client.Client
+	dh     dynamichelper.Interface
 
-	restConfig *rest.Config
 	verFixed46 *version.Version
 	verFixed47 *version.Version
 }
@@ -54,15 +49,15 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		securitycli:   securitycli,
-		client:        client,
-		restConfig:    restConfig,
-		verFixed46:    verFixed46,
-		verFixed47:    verFixed47,
+		log: log,
+
+		client: client,
+		dh:     dh,
+
+		verFixed46: verFixed46,
+		verFixed47: verFixed47,
 	}
 }
 
@@ -102,14 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
-	// TODO: dh should be a field in r, but the fact that it is initialised here
-	// each time currently saves us in the case that the controller runs before
-	// the SCC API is registered.
-	dh, err := dynamichelper.New(r.log, r.restConfig)
-	if err != nil {
-		r.log.Error(err)
-		return reconcile.Result{}, err
-	}
+	r.log.Debugf("deploying RouteFix")
 
 	resources, err := r.resources(ctx, instance)
 	if err != nil {
@@ -129,7 +117,7 @@ func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) 
 		return reconcile.Result{}, err
 	}
 
-	err = dh.Ensure(ctx, resources...)
+	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -139,11 +127,24 @@ func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) 
 }
 
 func (r *Reconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
-	err := r.kubernetescli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
+	r.log.Debugf("removing RouteFix")
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeNamespace,
+		},
+	}
+	err := r.client.Delete(ctx, ns)
 	if !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
-	err = r.kubernetescli.RbacV1().ClusterRoleBindings().Delete(ctx, kubeName, metav1.DeleteOptions{})
+
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeName,
+		},
+	}
+	err = r.client.Delete(ctx, crb)
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil
 	}

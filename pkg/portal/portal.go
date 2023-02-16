@@ -284,10 +284,10 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
 		name := regexp.FindString(name)
 		switch name {
-		case "v1/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 		case "v2/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
+		case "v1/build/index.html":
+			r.NewRoute().Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 		case "":
 		default:
 			fmtName := strings.TrimPrefix(name, "v1/build/")
@@ -332,6 +332,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
+
 	if err != nil {
 		p.internalServerError(w, err)
 		return

@@ -7,14 +7,10 @@ import (
 	"context"
 
 	securityv1 "github.com/openshift/api/security/v1"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,21 +36,16 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-	securitycli   securityclient.Interface
-
-	restConfig *rest.Config
-
+	dh     dynamichelper.Interface
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		securitycli:   securitycli,
-		kubernetescli: kubernetescli,
-		restConfig:    restConfig,
-		client:        client,
+		log: log,
+
+		dh:     dh,
+		client: client,
 	}
 }
 
@@ -72,21 +63,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+	operatorSecret := &corev1.Secret{}
+	err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO: dh should be a field in r, but the fact that it is initialised here
-	// each time currently saves us in the case that the controller runs before
-	// the SCC API is registered.
-	dh, err := dynamichelper.New(r.log, r.restConfig)
-	if err != nil {
-		r.log.Error(err)
-		return reconcile.Result{}, err
-	}
-
-	resources, err := r.resources(ctx, instance, mysec.Data[GenevaCertName], mysec.Data[GenevaKeyName])
+	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -104,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = dh.Ensure(ctx, resources...)
+	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

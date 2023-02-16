@@ -8,10 +8,6 @@ import (
 	"flag"
 	"fmt"
 
-	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,23 +79,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	maocli, err := machineclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	mcocli, err := mcoclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	securitycli, err := securityclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	imageregistrycli, err := imageregistryclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	// TODO (NE): dh is sometimes passed, sometimes created later. Can we standardize?
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		return err
@@ -108,7 +87,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
 			log.WithField("controller", genevalogging.ControllerName),
-			client, kubernetescli, securitycli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
 		}
 		if err = (clusteroperatoraro.NewReconciler(
@@ -118,27 +97,27 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", pullsecret.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", pullsecret.ControllerName, err)
 		}
 		if err = (alertwebhook.NewReconciler(
 			log.WithField("controller", alertwebhook.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", alertwebhook.ControllerName, err)
 		}
 		if err = (workaround.NewReconciler(
 			log.WithField("controller", workaround.ControllerName),
-			client, kubernetescli, mcocli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", routefix.ControllerName),
-			client, kubernetescli, securitycli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
 		if err = (monitoring.NewReconciler(
 			log.WithField("controller", monitoring.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
@@ -148,17 +127,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (dnsmasq.NewClusterReconciler(
 			log.WithField("controller", dnsmasq.ClusterControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigPoolReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(
@@ -168,12 +147,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (subnets.NewReconciler(
 			log.WithField("controller", subnets.ControllerName),
-			client, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", subnets.ControllerName, err)
 		}
 		if err = (machine.NewReconciler(
 			log.WithField("controller", machine.ControllerName),
-			client, maocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
+			client, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machine.ControllerName, err)
 		}
 		if err = (banner.NewReconciler(
@@ -182,8 +161,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
 		}
 		if err = (machineset.NewReconciler(
-			log.WithField("controller", machineset.ControllerName),
-			client, maocli)).SetupWithManager(mgr); err != nil {
+			log.WithField("controller", machineset.ControllerName), client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
 		}
 		if err = (imageconfig.NewReconciler(
@@ -193,17 +171,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (previewfeature.NewReconciler(
 			log.WithField("controller", previewfeature.ControllerName),
-			client, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", previewfeature.ControllerName, err)
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", storageaccounts.ControllerName),
-			client, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
 		if err = (muo.NewReconciler(
 			log.WithField("controller", muo.ControllerName),
-			client, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
 		}
 		if err = (autosizednodes.NewReconciler(
@@ -223,7 +201,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (serviceprincipalchecker.NewReconciler(
 			log.WithField("controller", serviceprincipalchecker.ControllerName),
-			client, kubernetescli, role)).SetupWithManager(mgr); err != nil {
+			client, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", serviceprincipalchecker.ControllerName, err)
 		}
 		if err = (clusterdnschecker.NewReconciler(

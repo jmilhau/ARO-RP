@@ -10,11 +10,9 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,9 +40,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-	maocli        machineclient.Interface
-
 	client client.Client
 }
 
@@ -60,12 +55,10 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		maocli:        maocli,
-		client:        client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -101,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create a refreshable authorizer from token
-	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.kubernetescli, aad.NewTokenClient())
+	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client, aad.NewTokenClient())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -115,7 +108,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		log:            r.log,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
-		kubeSubnets:    subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		kubeSubnets:    subnet.NewKubeManager(r.client, resource.SubscriptionID),
 		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 	}
 

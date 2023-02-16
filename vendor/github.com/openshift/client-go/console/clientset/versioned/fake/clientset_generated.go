@@ -3,9 +3,11 @@
 package fake
 
 import (
-	clientset "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	imageregistryv1 "github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregistry/v1"
-	fakeimageregistryv1 "github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregistry/v1/fake"
+	clientset "github.com/openshift/client-go/console/clientset/versioned"
+	consolev1 "github.com/openshift/client-go/console/clientset/versioned/typed/console/v1"
+	fakeconsolev1 "github.com/openshift/client-go/console/clientset/versioned/typed/console/v1/fake"
+	consolev1alpha1 "github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1"
+	fakeconsolev1alpha1 "github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -63,7 +65,12 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// ImageregistryV1 retrieves the ImageregistryV1Client
-func (c *Clientset) ImageregistryV1() imageregistryv1.ImageregistryV1Interface {
-	return &fakeimageregistryv1.FakeImageregistryV1{Fake: &c.Fake}
+// ConsoleV1 retrieves the ConsoleV1Client
+func (c *Clientset) ConsoleV1() consolev1.ConsoleV1Interface {
+	return &fakeconsolev1.FakeConsoleV1{Fake: &c.Fake}
+}
+
+// ConsoleV1alpha1 retrieves the ConsoleV1alpha1Client
+func (c *Clientset) ConsoleV1alpha1() consolev1alpha1.ConsoleV1alpha1Interface {
+	return &fakeconsolev1alpha1.FakeConsoleV1alpha1{Fake: &c.Fake}
 }

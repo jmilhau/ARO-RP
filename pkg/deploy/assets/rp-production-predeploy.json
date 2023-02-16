@@ -85,6 +85,10 @@
             "type": "string",
             "maxLength": 20
         },
+        "rpNsgPortalSourceAddressPrefixes": {
+            "type": "array",
+            "defaultValue": []
+        },
         "rpServicePrincipalId": {
             "type": "string"
         }
@@ -371,6 +375,23 @@
                     ]
                 }
             }
+        },
+        {
+            "properties": {
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "444",
+                "sourceAddressPrefixes": "[parameters('rpNsgPortalSourceAddressPrefixes')]",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 142,
+                "direction": "Inbound"
+            },
+            "name": "rp-nsg/portal_in",
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "condition": "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]"
         }
     ]
 }

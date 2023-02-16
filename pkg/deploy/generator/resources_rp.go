@@ -37,6 +37,19 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 	}
 }
 
+func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
+	return g.securityRules("rp-nsg/portal_in", &mgmtnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+		SourcePortRange:          to.StringPtr("*"),
+		DestinationPortRange:     to.StringPtr("444"),
+		SourceAddressPrefixes:    &[]string{},
+		DestinationAddressPrefix: to.StringPtr("*"),
+		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+		Priority:                 to.Int32Ptr(142),
+		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
+}
+
 func (g *generator) rpSecurityGroup() *arm.Resource {
 	rules := []mgmtnetwork.SecurityRule{
 		{
