@@ -37,9 +37,9 @@ func TestListInstallVersions(t *testing.T) {
 		{
 			name: "return multiple versions",
 			changeFeed: map[string]*api.OpenShiftVersion{
-				version.InstallStream.Version.String(): {
+				version.DefaultInstallStream.Version.String(): {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.InstallStream.Version.String(),
+						Version: version.DefaultInstallStream.Version.String(),
 						Enabled: true,
 					},
 				},
@@ -62,7 +62,7 @@ func TestListInstallVersions(t *testing.T) {
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.InstallStream.Version.String(),
+							Version: version.DefaultInstallStream.Version.String(),
 						},
 					},
 					{
@@ -89,7 +89,7 @@ func TestListInstallVersions(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftVersions()
 			defer ti.done()
 
-			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
