@@ -62,7 +62,6 @@ func (c *Client) ListDetectors(
 		o,
 		nil)
 	if err != nil {
-		log.Error(err, "Error getting app lense list detectors from applens client")
 		return nil, err
 	}
 
