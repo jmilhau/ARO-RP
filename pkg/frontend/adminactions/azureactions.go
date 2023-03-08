@@ -140,6 +140,7 @@ func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string
 func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
 	resp, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
 	if err != nil {
+		log.Error(err, "Error getting app lense list in azzure actions")
 		return nil, err
 	}
 	return json.Marshal(resp.Body)
