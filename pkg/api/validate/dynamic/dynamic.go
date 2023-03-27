@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -60,6 +62,7 @@ type dynamic struct {
 	log            *logrus.Entry
 	authorizer     refreshable.Authorizer
 	authorizerType AuthorizerType
+	cred           azcore.TokenCredential
 	env            env.Interface
 	azEnv          *azureclient.AROEnvironment
 
@@ -81,7 +84,7 @@ const (
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 )
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient, pdpClient remotepdp.RemotePDPClient) (Dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, cred azcore.TokenCredential, tokenClient aad.TokenClient, pdpClient remotepdp.RemotePDPClient) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizer:     authorizer,
@@ -347,7 +350,13 @@ func (c closure) usingListPermissions() (bool, error) {
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("retry validationActions with CheckAccessV2")
-	oid, err := aad.GetObjectId(c.dv.authorizer.OAuthToken())
+
+	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}})
+	if err != nil {
+		return false, err
+	}
+
+	oid, err := aad.GetObjectId(t.Token)
 	if err != nil {
 		return false, err
 	}

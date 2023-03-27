@@ -103,7 +103,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, aad.NewTokenClient(), dv.pdpClient)
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, dv.fpClientCredential, aad.NewTokenClient(), dv.pdpClient)
 	if err != nil {
 		return err
 	}
@@ -118,8 +118,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	//TODO create the cluster SP and add to NewValidator
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient(), dv.pdpClient)
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, dv.spClientCredential, aad.NewTokenClient(), dv.pdpClient)
 	if err != nil {
 		return err
 	}
