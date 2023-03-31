@@ -349,17 +349,22 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 
 	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}})
 	if err != nil {
+		c.dv.log.Info(fmt.Sprintf("Error receiving token: %s", err.Error()))
 		return false, err
 	}
+	c.dv.log.Info(fmt.Sprintf("Received token: %s", t.Token))
 
 	oid, err := aad.GetObjectId(t.Token)
 	if err != nil {
+		c.dv.log.Info(fmt.Sprintf("Error retrieving oid: %s", err.Error()))
 		return false, err
 	}
+	c.dv.log.Info(fmt.Sprintf("Received oid: %s", oid))
 
 	authReq := createAuthorizationRequest(oid, c.resource.String(), c.actions...)
 	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
 	if err != nil {
+		c.dv.log.Info(fmt.Sprintf("Error calling CheckAccess: %s", err.Error()))
 		return false, err
 	}
 
@@ -369,6 +374,8 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 			return false, nil
 		}
 	}
+
+	c.dv.log.Info(fmt.Sprintf("%s has access", oid))
 
 	return true, nil
 }
