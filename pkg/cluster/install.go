@@ -46,6 +46,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
+		steps.Action(m.ensureBYONsg),
 		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
@@ -230,6 +231,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.ensureBYONsg),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),

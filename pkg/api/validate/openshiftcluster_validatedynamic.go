@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -56,8 +57,10 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		})
 	}
 
+	byoNSG := feature.IsRegisteredForFeature(dv.subscriptionDoc.Subscription.Properties, api.FeatureFlagBYONsg)
+
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, aad.NewTokenClient())
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, aad.NewTokenClient(), byoNSG)
 	if err != nil {
 		return err
 	}
@@ -81,7 +84,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient())
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient(), byoNSG)
 	if err != nil {
 		return err
 	}

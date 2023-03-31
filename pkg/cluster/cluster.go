@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -100,6 +101,7 @@ type manager struct {
 
 	installViaHive     bool
 	adoptViaHive       bool
+	byoNSG             bool
 	hiveClusterManager hive.ClusterManager
 
 	aroOperatorDeployer deploy.Operator
@@ -184,5 +186,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		hiveClusterManager:                hiveClusterManager,
 		now:                               func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
+		byoNSG:                            feature.IsRegisteredForFeature(subscriptionDoc.Subscription.Properties, api.FeatureFlagBYONsg),
 	}, nil
 }
