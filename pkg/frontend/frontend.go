@@ -79,8 +79,9 @@ type frontend struct {
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
 
-	skuValidator   SkuValidator
-	quotaValidator QuotaValidator
+	skuValidator       SkuValidator
+	quotaValidator     QuotaValidator
+	providersValidator ProvidersValidator
 
 	l net.Listener
 	s *http.Server
@@ -160,6 +161,7 @@ func NewFrontend(ctx context.Context,
 		ocEnricherFactory:             ocEnricherFactory,
 		quotaValidator:                quotaValidator{},
 		skuValidator:                  skuValidator{},
+		providersValidator:            providersValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
@@ -293,6 +295,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/", f.getAdminOpenShiftVersions)
 			r.Put("/", f.putAdminOpenShiftVersion)
 		})
+		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
 		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
 			func(r chi.Router) {
