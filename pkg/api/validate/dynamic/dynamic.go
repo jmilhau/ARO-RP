@@ -347,7 +347,10 @@ func (c closure) usingListPermissions() (bool, error) {
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("retry validationActions with CheckAccessV2")
 
-	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}})
+	c.dv.log.Info("retrieving token...")
+	tokenRequestOptions := policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}}
+	c.dv.log.Info(fmt.Sprintf("token request options: %s", tokenRequestOptions.Scopes[0]))
+	t, err := c.dv.cred.GetToken(c.ctx, tokenRequestOptions)
 	if err != nil {
 		c.dv.log.Info(fmt.Sprintf("Error receiving token: %s", err.Error()))
 		return false, err
