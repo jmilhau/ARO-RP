@@ -88,6 +88,7 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		authorizerType: authorizerType,
 		env:            env,
 		azEnv:          azEnv,
+		cred:           cred,
 
 		spComputeUsage:     compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage:     network.NewUsageClient(azEnv, subscriptionID, authorizer),
@@ -347,10 +348,8 @@ func (c closure) usingListPermissions() (bool, error) {
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("retry validationActions with CheckAccessV2")
 
-	c.dv.log.Info("retrieving token...")
-	tokenRequestOptions := policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}}
-	c.dv.log.Info(fmt.Sprintf("token request options: %s", tokenRequestOptions.Scopes[0]))
-	t, err := c.dv.cred.GetToken(c.ctx, tokenRequestOptions)
+	scope := c.dv.azEnv.Environment.ResourceManagerEndpoint + "/.default"
+	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		c.dv.log.Info(fmt.Sprintf("Error receiving token: %s", err.Error()))
 		return false, err
@@ -369,6 +368,11 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 	if err != nil {
 		c.dv.log.Info(fmt.Sprintf("Error calling CheckAccess: %s", err.Error()))
 		return false, err
+	}
+
+	if results == nil {
+		c.dv.log.Info("nil response returned from CheckAccessV2")
+		return false, nil
 	}
 
 	for _, result := range results.Value {

@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -16,8 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -48,7 +48,7 @@ func NewOpenShiftClusterDynamicValidator(ctx context.Context, log *logrus.Entry,
 
 		aroEnv := env.Environment()
 		pdpClient = remotepdp.NewRemotePDPClient(
-			aroEnv.AzureRbacPDPEnvironment.Endpoint,
+			fmt.Sprintf(aroEnv.AzureRbacPDPEnvironment.Endpoint, env.Location()),
 			aroEnv.AzureRbacPDPEnvironment.OAuthScope,
 			fpClientCred,
 		)
