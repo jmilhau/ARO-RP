@@ -88,6 +88,7 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		authorizerType: authorizerType,
 		env:            env,
 		azEnv:          azEnv,
+		cred:           cred,
 
 		spComputeUsage:     compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage:     network.NewUsageClient(azEnv, subscriptionID, authorizer),
@@ -347,7 +348,8 @@ func (c closure) usingListPermissions() (bool, error) {
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("retry validationActions with CheckAccessV2")
 
-	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{c.dv.azEnv.AzureRbacPDPEnvironment.OAuthScope}})
+	scope := c.dv.azEnv.Environment.ResourceManagerEndpoint + "/.default"
+	t, err := c.dv.cred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		return false, err
 	}

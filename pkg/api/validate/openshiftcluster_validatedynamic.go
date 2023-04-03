@@ -48,7 +48,7 @@ func NewOpenShiftClusterDynamicValidator(ctx context.Context, log *logrus.Entry,
 
 		aroEnv := env.Environment()
 		pdpClient = remotepdp.NewRemotePDPClient(
-			aroEnv.AzureRbacPDPEnvironment.Endpoint,
+			fmt.Sprintf(aroEnv.AzureRbacPDPEnvironment.Endpoint, env.Location()),
 			aroEnv.AzureRbacPDPEnvironment.OAuthScope,
 			fpClientCred,
 		)
