@@ -369,6 +369,11 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		return false, err
 	}
 
+	if results == nil {
+		c.dv.log.Info("nil response returned from CheckAccessV2")
+		return false, nil
+	}
+
 	for _, result := range results.Value {
 		if result.AccessDecision != remotepdp.Allowed {
 			c.dv.log.Debug(fmt.Sprintf("%s has no access to %s", oid, result.ActionId))
